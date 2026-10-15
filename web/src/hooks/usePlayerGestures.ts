@@ -26,6 +26,7 @@ export function usePlayerGestures(containerRef: React.RefObject<HTMLDivElement |
     zoomScale,
     setZoomScale,
     isLocked,
+    isMiniPlayer,
     setIsMiniPlayer,
     setModal,
   } = usePlayerStore();
@@ -57,7 +58,7 @@ export function usePlayerGestures(containerRef: React.RefObject<HTMLDivElement |
 
   const handleTouchStart = useCallback(
     (e: React.TouchEvent<HTMLDivElement>) => {
-      if (isLocked) return;
+      if (isLocked || isMiniPlayer) return;
 
       if (e.touches.length === 2) {
         // Pinch-to-zoom gesture
@@ -96,13 +97,24 @@ export function usePlayerGestures(containerRef: React.RefObject<HTMLDivElement |
       const zone: 'left' | 'center' | 'right' =
         x < width * 0.35 ? 'left' : x > width * 0.65 ? 'right' : 'center';
 
+      const am = typeof window !== 'undefined' ? (window as any).AndroidMedia : null;
+      let startBrightness = brightness;
+      if (am && typeof am.getBrightness === 'function') {
+        try {
+          const sysB = am.getBrightness();
+          if (typeof sysB === 'number' && sysB > 0) {
+            startBrightness = sysB;
+          }
+        } catch {}
+      }
+
       touchStartRef.current = {
         x,
         y,
         time: Date.now(),
         zone,
         initialVolume: volume,
-        initialBrightness: brightness,
+        initialBrightness: startBrightness,
         initialCurrentTime: currentTime,
         initialDistance: 0,
       };
@@ -134,7 +146,7 @@ export function usePlayerGestures(containerRef: React.RefObject<HTMLDivElement |
 
   const handleTouchMove = useCallback(
     (e: React.TouchEvent<HTMLDivElement>) => {
-      if (isLocked || !touchStartRef.current) return;
+      if (isLocked || isMiniPlayer || !touchStartRef.current) return;
 
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return;
@@ -198,14 +210,23 @@ export function usePlayerGestures(containerRef: React.RefObject<HTMLDivElement |
 
         if (touchStartRef.current.zone === 'left') {
           const newBrightness = Math.min(
-            1.5,
-            Math.max(0.2, touchStartRef.current.initialBrightness + change)
+            1.0,
+            Math.max(0.02, touchStartRef.current.initialBrightness + change)
           );
           setBrightness(newBrightness);
+
+          const am = typeof window !== 'undefined' ? (window as any).AndroidMedia : null;
+          if (am && typeof am.setBrightness === 'function') {
+            try {
+              am.setBrightness(newBrightness);
+            } catch {}
+          }
+
+          const pct = Math.round(newBrightness * 100);
           setFeedback({
             type: 'brightness',
-            value: Math.round(((newBrightness - 0.2) / 1.3) * 100),
-            label: `${Math.round(((newBrightness - 0.2) / 1.3) * 100)}%`,
+            value: pct,
+            label: `${pct}%`,
           });
         } else if (touchStartRef.current.zone === 'right') {
           const newVolume = Math.min(

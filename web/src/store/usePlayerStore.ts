@@ -25,6 +25,7 @@ interface PlayerState {
   isPiP: boolean;
   isLocked: boolean;
   isMiniPlayer: boolean;
+  isNativePiP: boolean;
   isBuffering: boolean;
   errorMessage: string | null;
 
@@ -73,6 +74,7 @@ interface PlayerState {
   setIsPiP: (pip: boolean) => void;
   setIsLocked: (locked: boolean) => void;
   setIsMiniPlayer: (mini: boolean) => void;
+  setIsNativePiP: (inPiP: boolean) => void;
   setIsBuffering: (buffering: boolean) => void;
   setErrorMessage: (msg: string | null) => void;
   setQualities: (qualities: StreamQuality[]) => void;
@@ -118,6 +120,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   isPiP: false,
   isLocked: false,
   isMiniPlayer: false,
+  isNativePiP: false,
   isBuffering: false,
   errorMessage: null,
 
@@ -212,7 +215,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   setDuration: (duration) => set({ duration }),
   setVolume: (volume) => set({ volume: Math.max(0, Math.min(1, volume)) }),
   setVolumeBoost: (boost) => set({ volumeBoost: Math.max(1.0, Math.min(2.0, boost)) }),
-  setBrightness: (b) => set({ brightness: Math.max(0.2, Math.min(1.5, b)) }),
+  setBrightness: (b) => set({ brightness: Math.max(0.01, Math.min(1.0, b)) }),
   setPlaybackRate: (rate) => set({ playbackRate: rate }),
   setAspectMode: (mode) => set({ aspectMode: mode }),
   setZoomScale: (zoom) => set({ zoomScale: Math.max(0.5, Math.min(3.0, zoom)) }),
@@ -220,6 +223,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   setIsPiP: (pip) => set({ isPiP: pip }),
   setIsLocked: (locked) => set({ isLocked: locked }),
   setIsMiniPlayer: (mini) => set({ isMiniPlayer: mini }),
+  setIsNativePiP: (inPiP) => set({ isNativePiP: inPiP }),
   setIsBuffering: (b) => set({ isBuffering: b }),
   setErrorMessage: (msg) => set({ errorMessage: msg }),
   setQualities: (qualities) => set({ qualities }),
@@ -276,6 +280,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       currentTime: 0,
       duration: 0,
       isMiniPlayer: false,
+      isNativePiP: false,
       errorMessage: null,
     });
   },

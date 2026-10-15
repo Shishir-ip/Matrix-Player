@@ -18,6 +18,18 @@ export function App() {
   const { isPhone, isTablet, isTv } = useAdaptiveLayout();
   const { currentTab, setCurrentTab, loadLibrary } = useLibraryStore();
   const { theme } = useSettingsStore();
+  const { currentMedia, isPiP, setIsPiP, setIsNativePiP } = usePlayerStore();
+
+  // Listen to Android Picture-in-Picture mode transitions
+  useEffect(() => {
+    (window as any).onPictureInPictureChanged = (inPiP: boolean) => {
+      setIsPiP(!!inPiP);
+      setIsNativePiP(!!inPiP);
+    };
+    return () => {
+      delete (window as any).onPictureInPictureChanged;
+    };
+  }, [setIsPiP, setIsNativePiP]);
 
   // Enable TV D-Pad Spatial Navigation when in TV layout
   useTvNavigation(isTv);
@@ -98,6 +110,15 @@ export function App() {
       delete (window as any).handleAndroidBack;
     };
   }, [isSettingsOpen, currentTab, setCurrentTab]);
+
+  // In Picture-in-Picture mode, render exclusively the PlayerScreen with zero background app chrome
+  if (isPiP && currentMedia) {
+    return (
+      <div className="fixed inset-0 w-screen h-screen bg-black overflow-hidden flex items-center justify-center select-none z-[99999]">
+        <PlayerScreen />
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full h-[100dvh] flex flex-col overflow-hidden bg-nothing-bg text-nothing-text font-sans">

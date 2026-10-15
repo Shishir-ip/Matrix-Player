@@ -323,9 +323,11 @@ export const VideoSurface: React.FC<VideoSurfaceProps> = ({ onEngineReady, video
             setIsBuffering(false);
           }
         }}
-        className={`${getAspectClass()} transition-[filter] duration-150`}
+        className={getAspectClass()}
         style={{
-          filter: `brightness(${brightness})`,
+          filter: (typeof window !== 'undefined' && !(window as any).AndroidMedia && brightness !== 1)
+            ? `brightness(${brightness})`
+            : undefined,
           transform: `scale(${zoomScale})`,
           transformOrigin: 'center center',
         }}

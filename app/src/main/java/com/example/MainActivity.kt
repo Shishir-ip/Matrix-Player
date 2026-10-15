@@ -412,13 +412,88 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private var pipSourceRect: android.graphics.Rect? = null
+    private var isMiniPlayerActive: Boolean = false
+
+    fun setPipSourceRect(left: Int, top: Int, right: Int, bottom: Int) {
+        if (left >= 0 && top >= 0 && right > left && bottom > top) {
+            pipSourceRect = android.graphics.Rect(left, top, right, bottom)
+            updatePipParams(isVideoPlaying)
+        }
+    }
+
+    fun setIsMiniPlayerActive(active: Boolean) {
+        isMiniPlayerActive = active
+        updatePipParams(isVideoPlaying)
+    }
+
+    fun setScreenBrightness(value: Float) {
+        val clamped = value.coerceIn(0.01f, 1.0f)
+        runOnUiThread {
+            // 1. Set window attributes screenBrightness (hardware screen backlight for this app window)
+            try {
+                val lp = window.attributes
+                lp.screenBrightness = clamped
+                window.attributes = lp
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            // 2. Also control phone system brightness if WRITE_SETTINGS is permitted
+            try {
+                val canWrite = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    android.provider.Settings.System.canWrite(this@MainActivity)
+                } else {
+                    true
+                }
+                if (canWrite) {
+                    val intVal = (clamped * 255).toInt().coerceIn(1, 255)
+                    android.provider.Settings.System.putInt(
+                        contentResolver,
+                        android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE,
+                        android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
+                    )
+                    android.provider.Settings.System.putInt(
+                        contentResolver,
+                        android.provider.Settings.System.SCREEN_BRIGHTNESS,
+                        intVal
+                    )
+                }
+            } catch (ignored: Exception) {}
+        }
+    }
+
+    fun getScreenBrightness(): Float {
+        val lp = window.attributes
+        if (lp.screenBrightness in 0.01f..1.0f) {
+            return lp.screenBrightness
+        }
+        return try {
+            val sys = android.provider.Settings.System.getInt(
+                contentResolver,
+                android.provider.Settings.System.SCREEN_BRIGHTNESS
+            )
+            (sys / 255.0f).coerceIn(0.01f, 1.0f)
+        } catch (e: Exception) {
+            0.5f
+        }
+    }
+
     fun enterPictureInPictureModeCompat(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             return try {
-                val params = PictureInPictureParams.Builder()
+                runOnUiThread {
+                    webView?.evaluateJavascript(
+                        "window.onPictureInPictureChanged && window.onPictureInPictureChanged(true)",
+                        null
+                    )
+                }
+                val builder = PictureInPictureParams.Builder()
                     .setAspectRatio(android.util.Rational(16, 9))
-                    .build()
-                enterPictureInPictureMode(params)
+                pipSourceRect?.let { rect ->
+                    builder.setSourceRectHint(rect)
+                }
+                enterPictureInPictureMode(builder.build())
             } catch (e: Exception) {
                 false
             }
@@ -427,21 +502,24 @@ class MainActivity : ComponentActivity() {
     }
 
     fun updatePipParams(playing: Boolean) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
-                setPictureInPictureParams(
-                    PictureInPictureParams.Builder()
-                        .setAspectRatio(android.util.Rational(16, 9))
-                        .setAutoEnterEnabled(playing)
-                        .build()
-                )
+                val builder = PictureInPictureParams.Builder()
+                    .setAspectRatio(android.util.Rational(16, 9))
+                pipSourceRect?.let { rect ->
+                    builder.setSourceRectHint(rect)
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    builder.setAutoEnterEnabled(playing || isMiniPlayerActive)
+                }
+                setPictureInPictureParams(builder.build())
             } catch (e: Exception) {}
         }
     }
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        if (isVideoPlaying && !isInPictureInPictureModeCompat()) {
+        if ((isVideoPlaying || isMiniPlayerActive) && !isInPictureInPictureModeCompat()) {
             enterPictureInPictureModeCompat()
         }
     }
@@ -661,6 +739,11 @@ class MainActivity : ComponentActivity() {
             mediaSession?.release()
         } catch (ignored: Exception) {}
         mediaSession = null
+        try {
+            val lp = window.attributes
+            lp.screenBrightness = android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+            window.attributes = lp
+        } catch (ignored: Exception) {}
         super.onDestroy()
     }
 
@@ -736,6 +819,48 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface
         fun updatePlaybackState(isPlaying: Boolean, positionSec: Double) {
             this@MainActivity.updatePlaybackState(isPlaying, positionSec)
+        }
+
+        @JavascriptInterface
+        fun setBrightness(brightness: Float) {
+            this@MainActivity.setScreenBrightness(brightness)
+        }
+
+        @JavascriptInterface
+        fun getBrightness(): Float {
+            return this@MainActivity.getScreenBrightness()
+        }
+
+        @JavascriptInterface
+        fun setPipSourceRect(left: Int, top: Int, right: Int, bottom: Int) {
+            this@MainActivity.setPipSourceRect(left, top, right, bottom)
+        }
+
+        @JavascriptInterface
+        fun setIsMiniPlayerState(active: Boolean) {
+            this@MainActivity.setIsMiniPlayerActive(active)
+        }
+
+        @JavascriptInterface
+        fun hasWriteSettingsPermission(): Boolean {
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                android.provider.Settings.System.canWrite(this@MainActivity)
+            } else {
+                true
+            }
+        }
+
+        @JavascriptInterface
+        fun requestWriteSettingsPermission() {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !android.provider.Settings.System.canWrite(this@MainActivity)) {
+                try {
+                    val intent = Intent(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
+                        data = Uri.parse("package:$packageName")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivity(intent)
+                } catch (ignored: Exception) {}
+            }
         }
 
         @JavascriptInterface
