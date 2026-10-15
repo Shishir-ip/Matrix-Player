@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root, [data-theme="dark"] {
+    --theme-bg: #161618;
+    --theme-surface1: #222226;
+    --theme-surface2: #2a2a30;
+    --theme-surface3: #33333b;
+    --theme-border: #383842;
+    --theme-border-hover: #50505e;
+    --theme-text: #FFFFFF;
+    --theme-text-muted: #A1A1AA;
+    --theme-text-dim: #71717A;
+
+    --color-nothing-bg: #161618;
+    --color-nothing-red: #D71921;
+
+    /* Safe Area Insets with 16px bottom fallback for Android gesture / 3-button nav bar */
+    --safe-top: max(env(safe-area-inset-top, 0px), 0px);
+    --safe-right: max(env(safe-area-inset-right, 0px), 0px);
+    --safe-bottom: max(env(safe-area-inset-bottom, 16px), 16px);
+    --safe-left: max(env(safe-area-inset-left, 0px), 0px);
+
+    --bottom-nav-height: calc(64px + var(--safe-bottom));
+    --ui-scale: 1;
+  }
+
+  [data-theme="amoled"] {
+    --theme-bg: #000000;
+    --theme-surface1: #0A0A0A;
+    --theme-surface2: #141414;
+    --theme-surface3: #1E1E1E;
+    --theme-border: #262626;
+    --theme-border-hover: #404040;
+    --theme-text: #FFFFFF;
+    --theme-text-muted: #8A8A8A;
+    --theme-text-dim: #555555;
+    --color-nothing-bg: #000000;
+  }
+
+  [data-theme="light"] {
+    --theme-bg: #F4F4F6;
+    --theme-surface1: #FFFFFF;
+    --theme-surface2: #EAEAEE;
+    --theme-surface3: #DDDEE4;
+    --theme-border: #D2D3DC;
+    --theme-border-hover: #A1A2B0;
+    --theme-text: #0F0F12;
+    --theme-text-muted: #555562;
+    --theme-text-dim: #7C7D8A;
+    --color-nothing-bg: #F4F4F6;
+  }
+
+  html {
+    font-size: calc(16px * var(--ui-scale));
+    height: 100dvh;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: var(--theme-bg);
+    color: var(--theme-text);
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    height: 100dvh;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: var(--theme-bg);
+    color: var(--theme-text);
+    overflow: hidden;
+    overscroll-behavior: none;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  #root {
+    height: 100dvh;
+    width: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--theme-bg);
+    color: var(--theme-text);
+  }
+}
+
+/* Custom focus ring for Android TV / D-Pad spatial navigation */
+:focus-visible {
+  outline: 2px solid #D71921 !important;
+  outline-offset: 2px;
+}
+
+/* Custom safe margins for TV Overscan */
+.overscan-safe {
+  padding-left: max(env(safe-area-inset-left, 24px), 24px);
+  padding-right: max(env(safe-area-inset-right, 24px), 24px);
+  padding-top: max(env(safe-area-inset-top, 16px), 16px);
+  padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px);
+}
+
+/* Hide scrollbars on mobile for clean touch feel */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

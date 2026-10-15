@@ -1,0 +1,6 @@
+{
+  "name": "Matrix Player",
+  "description": "Nothing OS inspired dot-matrix video and media player with adaptive phone, tablet, and TV layouts",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
